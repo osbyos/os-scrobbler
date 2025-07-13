@@ -4,7 +4,7 @@ import os
 import requests
 from xml.etree import ElementTree
 import time # Import the time module for delays
-from werkzeug.utils import secure_filename # <--- ADDED THIS IMPORT
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
@@ -33,7 +33,8 @@ def allowed_file(filename):
 def make_api_sig(params):
     """Generates a Last.fm API signature for authenticated calls."""
     # Sort parameters alphabetically by key, concatenate, and append API_SECRET
-    sig_raw = ''.join([k + str(params[k]) for k in sorted(params)]) + API_SECRET # Ensure params[k] is string
+    # Ensure all parameter values are strings before concatenation for hashing
+    sig_raw = ''.join([k + str(params[k]) for k in sorted(params)]) + API_SECRET
     return md5_hash(sig_raw)
 
 def get_session_key(token):
@@ -72,7 +73,7 @@ def get_user_info(username):
             for img in data['user']['image']:
                 if img['size'] == 'large' and img['#text']:
                     return img['#text']
-            # Corrected: changed 'medium' to 'image' for consistency with Last.fm API response structure
+            # Corrected: ensure it iterates over 'image' list for medium size too
             for img in data['user']['image']: 
                 if img['size'] == 'medium' and img['#text']:
                     return img['#text']
@@ -90,6 +91,7 @@ def decode_line(line):
 def submit_track_batch(tracks_batch, session_key, offset_seconds):
     """
     Submits a batch of tracks (up to 50) to Last.fm using the track.scrobble method.
+    `tracks_batch` is a list of dictionaries, where each dictionary represents a track.
     Returns a list of dictionaries with per-track results.
     """
     params = {
@@ -99,18 +101,22 @@ def submit_track_batch(tracks_batch, session_key, offset_seconds):
     }
 
     # Build indexed parameters for each track in the batch
-    for i, track in enumerate(tracks_batch):
-        # Track format: artist, album, title, tracknum, duration, L, timestamp
-        if len(track) < 7 or track[5] != 'L':
+    for i, track_dict in enumerate(tracks_batch):
+        # Ensure the track dictionary has the expected keys
+        if not all(k in track_dict for k in ['artist', 'album', 'title', 'tracknum', 'duration', 'flag', 'timestamp']):
             # This track will be marked as skipped in the results
             continue 
         
-        params[f'artist[{i}]'] = track[0]
-        params[f'album[{i}]'] = track[1]
-        params[f'track[{i}]'] = track[2]
-        params[f'trackNumber[{i}]'] = track[3]
-        params[f'duration[{i}]'] = track[4]
-        params[f'timestamp[{i}]'] = str(int(track[6]) + offset_seconds)
+        # Only scrobble tracks with 'L' flag (Loved/Played)
+        if track_dict['flag'] != 'L':
+            continue
+
+        params[f'artist[{i}]'] = track_dict['artist']
+        params[f'album[{i}]'] = track_dict['album']
+        params[f'track[{i}]'] = track_dict['title']
+        params[f'trackNumber[{i}]'] = track_dict['tracknum']
+        params[f'duration[{i}]'] = track_dict['duration']
+        params[f'timestamp[{i}]'] = str(int(track_dict['timestamp']) + offset_seconds)
 
     api_sig = make_api_sig(params)
     params['api_sig'] = api_sig
@@ -121,9 +127,9 @@ def submit_track_batch(tracks_batch, session_key, offset_seconds):
     if r.status_code != 200:
         # If the whole batch request fails, mark all tracks in batch as failed
         error_msg = f"http error for batch: {r.status_code}"
-        for track in tracks_batch:
+        for track_dict in tracks_batch:
             batch_results.append({
-                "track": f"{track[0]} - {track[2]}",
+                "track": f"{track_dict['artist']} - {track_dict['title']}",
                 "status": "fail",
                 "error": error_msg
             })
@@ -134,9 +140,9 @@ def submit_track_batch(tracks_batch, session_key, offset_seconds):
         if data.attrib.get('status') != 'ok':
             err_node = data.find('error')
             error_msg = err_node.text if err_node is not None else "unknown api error for batch"
-            for track in tracks_batch:
+            for track_dict in tracks_batch:
                 batch_results.append({
-                    "track": f"{track[0]} - {track[2]}",
+                    "track": f"{track_dict['artist']} - {track_dict['title']}",
                     "status": "fail",
                     "error": error_msg
                 })
@@ -146,19 +152,22 @@ def submit_track_batch(tracks_batch, session_key, offset_seconds):
         if scrobbles_node is None:
             # Handle unexpected response structure
             error_msg = "unexpected api response structure for scrobble batch"
-            for track in tracks_batch:
+            for track_dict in tracks_batch:
                 batch_results.append({
-                    "track": f"{track[0]} - {track[2]}",
+                    "track": f"{track_dict['artist']} - {track_dict['title']}",
                     "status": "fail",
                     "error": error_msg
                 })
             return batch_results
 
         # Parse individual scrobble results within the batch
+        # The API returns scrobbles in the order they were sent
         for i, scrobble_node in enumerate(scrobbles_node.findall('scrobble')):
             track_info = tracks_batch[i] # Get original track info for display
-            artist = scrobble_node.find('artist').text if scrobble_node.find('artist') is not None else track_info[0]
-            track_name = scrobble_node.find('track').text if scrobble_node.find('track') is not None else track_info[2]
+            
+            # Use data from API response if available, otherwise fallback to original parsed data
+            artist = scrobble_node.find('artist').text if scrobble_node.find('artist') is not None else track_info['artist']
+            track_name = scrobble_node.find('track').text if scrobble_node.find('track') is not None else track_info['title']
             
             status = "ok" if scrobble_node.attrib.get('accepted') == '1' else "fail"
             error = None
@@ -174,9 +183,9 @@ def submit_track_batch(tracks_batch, session_key, offset_seconds):
             })
     except ElementTree.ParseError as e:
         error_msg = f"xml parsing error: {e}"
-        for track in tracks_batch:
+        for track_dict in tracks_batch:
             batch_results.append({
-                "track": f"{track[0]} - {track[2]}",
+                "track": f"{track_dict['artist']} - {track_dict['title']}",
                 "status": "fail",
                 "error": error_msg
             })
@@ -185,9 +194,9 @@ def submit_track_batch(tracks_batch, session_key, offset_seconds):
         # Fallback to marking remaining tracks as failed
         error_msg = "mismatched scrobble results count from api"
         for i in range(len(batch_results), len(tracks_batch)):
-            track = tracks_batch[i]
+            track_dict = tracks_batch[i]
             batch_results.append({
-                "track": f"{track[0]} - {track[2]}",
+                "track": f"{track_dict['artist']} - {track_dict['title']}",
                 "status": "fail",
                 "error": error_msg
             })
@@ -251,7 +260,16 @@ def scrobbler():
             parts = e.split('\t')
             if len(parts) < 7:
                 continue
-            parsed_tracks.append(parts) # Store as list of parts for submit_track_batch
+            # Store as dictionary for easier access in submit_track_batch
+            parsed_tracks.append({
+                'artist': parts[0],
+                'album': parts[1],
+                'title': parts[2],
+                'tracknum': parts[3],
+                'duration': parts[4],
+                'flag': parts[5],
+                'timestamp': int(parts[6])
+            })
         session['parsed_tracks'] = parsed_tracks
         return render_template('scrobbler.html', username=username, tracks=parsed_tracks, pfp_url=pfp_url)
 
@@ -266,7 +284,7 @@ def submit_scrobbles():
     offset_hours = int(request.json.get('offset_hours', 0))
     offset_seconds = offset_hours * 3600
     session_key = session['session_key']
-    tracks = session['parsed_tracks']
+    tracks = session['parsed_tracks'] # This is now a list of dictionaries
 
     all_results = []
     total_success = 0
