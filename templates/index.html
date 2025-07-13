@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>os-scrobbler</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Helvetica", Arial, sans-serif; /* Changed to Helvetica with fallbacks */
+            background-color: #1a1a1a; /* Dark background */
+            color: #f0f0f0; /* Light text color */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Full viewport height */
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .subtitle {
+            font-size: 1em;
+            margin-top: 0px; /* Adjusted margin to place it below the main title */
+            margin-bottom: 15px; /* Spacing below subtitle */
+            color: #b0b0b0; /* Slightly lighter gray for subtitle */
+            text-transform: lowercase; /* Added lowercase transformation */
+        }
+
+        .main-title {
+            font-size: 3.5em; /* Larger title */
+            font-weight: 400; /* Less bold: changed from bold to 500 */
+            margin-bottom: -5px; /* Removed bottom margin to bring subtitle closer */
+            text-transform: lowercase; /* Already lowercase */
+            letter-spacing: 2px;
+        }
+
+        .login-button {
+            display: inline-block;
+            padding: 10px 25px; /* Smaller padding */
+            background-color: #e53935; /* Last.fm red-ish color */
+            color: white;
+            text-decoration: none;
+            border-radius: 20px; /* Slightly rounded corners */
+            font-size: 1.1em; /* Smaller font size */
+            font-weight: bold;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* More prominent shadow */
+            text-transform: lowercase; /* Added lowercase transformation */
+        }
+
+        .login-button:hover {
+            background-color: #c62828; /* Darker red on hover */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); /* Deeper shadow on hover */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="main-title">os-scrobbler</h1>
+        <p class="subtitle">a scrobble.log scrobbler</p>
+        <a href="/login" class="login-button">authorize with last.fm</a>
+    </div>
+</body>
+</html>

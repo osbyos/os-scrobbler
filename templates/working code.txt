@@ -1,0 +1,127 @@
+from flask import Flask, request, render_template, session, jsonify
+from datetime import datetime, timezone
+import pytz
+import hashlib
+import requests
+import time
+
+app = Flask(__name__)
+app.secret_key = "replace-with-a-secure-random-string"
+
+API_KEY = "your_lastfm_api_key"
+API_SECRET = "your_lastfm_api_secret"
+API_ROOT = "https://ws.audioscrobbler.com/2.0/"
+
+def make_api_signature(params):
+    keys = sorted(params.keys())
+    sig = ""
+    for k in keys:
+        sig += k + str(params[k])
+    sig += API_SECRET
+    return hashlib.md5(sig.encode("utf-8")).hexdigest()
+
+def get_session_key(username, password_md5):
+    token = hashlib.md5((username + password_md5).encode("utf-8")).hexdigest()
+    params = {
+        "method": "auth.getMobileSession",
+        "username": username,
+        "authToken": token,
+        "api_key": API_KEY,
+        "format": "json"
+    }
+    params["api_sig"] = make_api_signature(params)
+    r = requests.get(API_ROOT, params=params)
+    data = r.json()
+    if "session" in data:
+        return data["session"]["key"]
+    else:
+        raise Exception(f"Last.fm login error: {data.get('message')}")
+
+def scrobble_track(session_key, artist, track, album, timestamp):
+    params = {
+        "method": "track.scrobble",
+        "artist": artist,
+        "track": track,
+        "album": album,
+        "timestamp": timestamp,
+        "api_key": API_KEY,
+        "sk": session_key,
+        "format": "json"
+    }
+    params["api_sig"] = make_api_signature(params)
+    r = requests.post(API_ROOT, data=params)
+    return r.json()
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if "tracks" not in session:
+        session["tracks"] = []
+
+    error = None
+    message = None
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "upload_log":
+            uploaded_file = request.files.get("logfile")
+            if not uploaded_file:
+                error = "Please upload a .scrobbler.log file."
+            else:
+                try:
+                    lines = uploaded_file.read().decode("utf-8").splitlines()
+                    parsed_tracks = []
+                    for line in lines[3:]:  # skip header lines
+                        parts = line.strip().split("\t")
+                        if len(parts) >= 7 and parts[5] == "L":  # only "L" tracks
+                            parsed_tracks.append({
+                                "artist": parts[0],
+                                "album": parts[1],
+                                "title": parts[2],
+                                "timestamp": int(parts[6]),
+                                "original_timestamp": int(parts[6])  # keep original for offset reset
+                            })
+                    session["tracks"] = parsed_tracks
+                    message = f"Loaded {len(parsed_tracks)} tracks!"
+                except Exception as e:
+                    error = f"Error processing file: {e}"
+
+        elif action == "apply_offset":
+            try:
+                offset = float(request.form.get("offset", 0))
+                tz = request.form.get("timezone", "UTC")
+                # Apply offset (hours) to all tracks timestamps in session
+                tracks = session.get("tracks", [])
+                for t in tracks:
+                    t["timestamp"] = int(t["original_timestamp"] + offset * 3600)
+                session["tracks"] = tracks
+                message = "Offset applied!"
+            except Exception:
+                error = "Invalid offset value."
+
+        elif action == "upload_scrobbles":
+            # User inputs last.fm username and password hash
+            username = request.form.get("username")
+            password = request.form.get("password")
+            if not username or not password:
+                return jsonify({"error": "Username and password required."}), 400
+            password_md5 = hashlib.md5(password.encode("utf-8")).hexdigest()
+            try:
+                session_key = get_session_key(username, password_md5)
+            except Exception as e:
+                return jsonify({"error": str(e)}), 400
+
+            tracks = session.get("tracks", [])
+            total = len(tracks)
+            results = []
+            for i, t in enumerate(tracks):
+                resp = scrobble_track(session_key, t["artist"], t["title"], t["album"], t["timestamp"])
+                success = "scrobbles" in resp and resp["scrobbles"]["@attr"]["accepted"] == "1"
+                results.append({"track": t["title"], "success": success})
+                time.sleep(0.25)  # avoid hammering API too fast
+            return jsonify({"success": True, "results": results})
+
+    return render_template("index.html", error=error, message=message, tracks=session.get("tracks", []))
+
+if __name__ == "__main__":
+    app.run(debug=True)

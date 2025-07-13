@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scrobbler - {{ username }}</title>
+    <style>
+        body {
+            font-family: "Helvetica", Arial, sans-serif; /* Changed to Helvetica */
+            background-color: #1a1a1a; /* Dark background */
+            color: #f0f0f0; /* Light text color */
+            margin: 0;
+            padding: 20px;
+            padding-top: 70px; /* Add padding to push content down, away from the fixed header */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center content horizontally */
+            min-height: 100vh;
+            box-sizing: border-box; /* Include padding in element's total width and height */
+            position: relative; /* Needed for absolute positioning of .user-info */
+        }
+        
+        /* New styles for user info in top-right */
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex; /* Use flexbox to align image and text */
+            align-items: center; /* Vertically center items */
+            gap: 8px; /* Slightly reduced space between image and text */
+            color: #f0f0f0; /* Ensure text color is light */
+            font-size: 0.9em; /* Smaller font size */
+            font-weight: normal; /* Not bold */
+            z-index: 10; /* Ensure it stays on top of other content */
+            text-transform: lowercase; /* Added lowercase transformation */
+        }
+
+        .user-info .pfp {
+            width: 30px; /* Smaller size */
+            height: 30px; /* Smaller size */
+            border-radius: 50%; /* Make it circular */
+            border: 1px solid #555; /* Subtle border */
+            object-fit: cover; /* Ensure image covers the area without distortion */
+        }
+
+        h1, h3 {
+            color: #f0f0f0; /* Light text for headings */
+            text-align: center; /* Centered headings */
+            margin-bottom: 20px;
+            text-transform: lowercase; /* Added lowercase transformation */
+        }
+
+        form {
+            margin-bottom: 30px;
+            padding: 30px;
+            border: 1px solid #333; /* Darker border */
+            border-radius: 10px;
+            background-color: #2a2a2a; /* Slightly lighter dark for form background */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px; /* Kept form width as is, as it's a control element */
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px; /* Reduced from 15px to 10px */
+            font-weight: bold;
+            color: #b0b0b0; /* Consistent subtitle color */
+            text-transform: lowercase; /* Added lowercase transformation */
+        }
+
+        input[type="file"], input[type="number"] {
+            padding: 10px;
+            margin-right: 15px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            background-color: #3a3a3a; /* Dark input background */
+            color: #f0f0f0; /* Light input text */
+            font-size: 1em;
+            width: calc(100% - 30px); /* Adjust width for padding */
+            box-sizing: border-box; /* Include padding in width */
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 12px 30px;
+            background-color: #e53935; /* Last.fm red-ish color */
+            color: white;
+            border: none;
+            border-radius: 20px; /* Rounded button */
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            margin-top: 20px; /* Added space above the button */
+            text-transform: lowercase; /* Added lowercase transformation */
+        }
+
+        button:hover {
+            background-color: #c62828; /* Darker red on hover */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        /* New container for the "Tracks loaded" section to ensure proper centering */
+        .tracks-section-container {
+            width: 100%; /* Take full width */
+            max-width: 1000px; /* Match the max-width of the table-container */
+            margin: 0 auto; /* Center this entire section */
+            text-align: center; /* Center content within this container */
+        }
+
+        /* Container for the table to enable scrolling and set max-width */
+        .table-container {
+            width: 100%; /* Take full width of its parent (.tracks-section-container) */
+            max-height: 500px; /* Set max height for 25 tracks (approx) */
+            overflow-y: auto; /* Enable vertical scrolling */
+            overflow-x: auto; /* Keep horizontal scrolling for wide content */
+            margin-top: 10px; /* Reduced from 20px to 10px */
+            border-radius: 10px; /* Match table border-radius */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Match table shadow */
+            background-color: #2a2a2a; /* Match table background */
+        }
+
+        table {
+            width: 100%; /* Make table fill its container */
+            border-collapse: collapse;
+            background-color: #2a2a2a; /* Darker background for table */
+            margin-bottom: 0; /* Remove bottom margin from table itself to prevent double margin with container */
+        }
+
+        th, td {
+            border: 1px solid #333; /* Darker border for table cells */
+            padding: 15px;
+            text-align: left;
+            color: #f0f0f0; /* Light text color */
+            white-space: nowrap; /* Prevent text wrapping in table cells */
+        }
+
+        th {
+            background-color: #3a3a3a; /* Slightly lighter dark for table header */
+            font-weight: bold;
+            position: sticky; /* Make table header sticky */
+            top: 0; /* Stick to the top of the scrollable container */
+            z-index: 1; /* Ensure header is above scrolling content */
+            text-transform: lowercase; /* Added lowercase transformation */
+        }
+
+        tr:nth-child(even) {
+            background-color: #2f2f2f; /* Alternate row background */
+        }
+
+        #results {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 1000px; /* Increased max-width for the results area */
+            text-align: left;
+        }
+
+        #results p {
+            margin: 5px 0;
+        }
+        .green { color: #66bb6a; } /* Softer green for success */
+        .red { color: #ef5350; } /* Softer red for failure */
+    </style>
+    <script>
+    function adjustTimestamps() {
+        let offset = parseInt(document.getElementById('offset').value) || 0;
+        let rows = document.querySelectorAll('#track-table tbody tr');
+        rows.forEach(row => {
+            let ts = parseInt(row.dataset.timestamp);
+            
+            // Original timestamp localized to browser timezone
+            let originalDate = new Date(ts * 1000);
+            row.querySelector('.original').textContent = originalDate.toLocaleString();
+
+            // Adjusted timestamp with offset (in hours)
+            let adjustedDate = new Date((ts + offset*3600) * 1000);
+            row.querySelector('.adjusted').textContent = adjustedDate.toLocaleString();
+        });
+    }
+    function submitScrobbles() {
+        let offset = parseInt(document.getElementById('offset').value) || 0;
+        fetch('/submit_scrobbles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({offset_hours: offset})
+        }).then(resp => resp.json()).then(data => {
+            let output = document.getElementById('results');
+            output.innerHTML = `<p>Success: ${data.success}, Failed: ${data.failure}</p>`;
+            data.results.forEach(r => {
+                let color = r.status === 'ok' ? 'green' : 'red';
+                output.innerHTML += `<p style="color:${color}">${r.track}: ${r.status.toUpperCase()} ${r.error ? '- ' + r.error : ''}</p>`;
+            });
+        }).catch(err => alert('Error submitting scrobbles: ' + err));
+    }
+    window.onload = adjustTimestamps;
+    </script>
+</head>
+<body>
+    <div class="user-info">
+        {% if pfp_url %}
+            <img src="{{ pfp_url }}" alt="User Profile Picture" class="pfp">
+        {% endif %}
+        <p>logged in as: {{ username }}</p> {# Changed text to lowercase #}
+    </div>
+
+    {# The main content of the scrobbler page starts here #}
+    {% if not tracks %}
+    <form method="post" enctype="multipart/form-data">
+        <h3>upload your .scrobbler.log file:</h3> {# Changed text to lowercase #}
+        <input type="file" name="file" accept=".log" required>
+        <button type="submit">parse</button> {# Changed text to lowercase #}
+    </form>
+    {% else %}
+    <div class="tracks-section-container"> {# New container to center this entire section #}
+        <h3>tracks loaded: {{ tracks|length }}</h3> {# Changed text to lowercase #}
+        <label>timezone offset (hours): 
+            <input type="number" id="offset" value="0" onchange="adjustTimestamps()">
+        </label>
+        <div class="table-container"> {# New container for the table #}
+            <table id="track-table">
+                <thead><tr><th>artist</th><th>title</th><th>original timestamp (local)</th><th>adjusted timestamp (local)</th></tr></thead> {# Changed text to lowercase #}
+                <tbody>
+                    {% for t in tracks %}
+                    <tr data-timestamp="{{ t.timestamp }}">
+                        <td>{{ t.artist }}</td>
+                        <td>{{ t.title }}</td>
+                        <td class="original"></td>
+                        <td class="adjusted"></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div> {# End of table-container #}
+    </div> {# End of tracks-section-container #}
+    <button onclick="submitScrobbles()">upload adjusted scrobbles</button> {# Changed text to lowercase #}
+    <div id="results"></div>
+    {% endif %}
+</body>
+</html>
