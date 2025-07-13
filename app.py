@@ -4,6 +4,7 @@ import os
 import requests
 from xml.etree import ElementTree
 import time # Import the time module for delays
+from werkzeug.utils import secure_filename # <--- ADDED THIS IMPORT
 
 app = Flask(__name__)
 
