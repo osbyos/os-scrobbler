@@ -30,7 +30,8 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def make_api_sig(params):
-    sig_raw = ''.join([k + params[k] for k in sorted(params)]) + API_SECRET
+    # Ensure all parameter values are strings before concatenation for hashing
+    sig_raw = ''.join([k + str(params[k]) for k in sorted(params)]) + API_SECRET
     return md5_hash(sig_raw)
 
 def get_session_key(token):
@@ -82,8 +83,9 @@ def decode_line(line):
 
 def submit_track(track, session_key, offset_seconds):
     # Track format: artist, album, title, tracknum, duration, L, timestamp
-    if len(track) < 7 or track[5] != 'L':
-        return "Skipped"
+    # Changed condition: now allows 'L' or 'S' flags for scrobbling
+    if len(track) < 7 or track[5] not in ['L', 'S']:
+        return "Skipped (Flag not L or S)"
     params = {
         'method': 'track.scrobble',
         'artist[0]': track[0],
@@ -100,7 +102,16 @@ def submit_track(track, session_key, offset_seconds):
 
     r = requests.post("https://ws.audioscrobbler.com/2.0/", data=params, headers={"Content-Type": "application/x-www-form-urlencoded"})
     if r.status_code != 200:
+        # Attempt to parse XML for more specific error message even on HTTP error
+        try:
+            error_xml = ElementTree.fromstring(r.content)
+            err_node = error_xml.find('error')
+            if err_node is not None:
+                return f"HTTP {r.status_code} - API Message: {err_node.text}"
+        except ElementTree.ParseError:
+            pass # Ignore XML parse error if content is not valid XML
         return f"HTTP {r.status_code}"
+    
     data = ElementTree.fromstring(r.content)
     if data.attrib.get('status') != 'ok':
         err = data.find('error')
@@ -122,10 +133,10 @@ def login():
 def callback():
     token = request.args.get('token')
     if not token:
-        return "Missing token", 400
+        return "missing token", 400
     session_key, username, error = get_session_key(token)
     if error:
-        return f"Auth error: {error}", 400
+        return f"authentication error: {error}", 400
     session['session_key'] = session_key
     session['username'] = username
     return redirect(url_for('scrobbler'))
@@ -141,7 +152,7 @@ def scrobbler():
     if request.method == 'POST':
         file = request.files.get('file')
         if not file or not allowed_file(file.filename):
-            return "Invalid or missing file", 400
+            return "invalid or missing file", 400
 
         filename = secure_filename(file.filename)
         filepath = os.path.join(UPLOAD_FOLDER, filename)
@@ -151,7 +162,7 @@ def scrobbler():
             lines = [decode_line(line).strip() for line in f.readlines()]
 
         if not lines or lines[0] != "#AUDIOSCROBBLER/1.1":
-            return "Invalid scrobbler.log format", 400
+            return "invalid scrobbler.log format", 400
 
         tz_line, client_line, *entries = lines
         parsed_tracks = []
