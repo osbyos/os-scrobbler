@@ -3,8 +3,7 @@ import hashlib
 import os
 import requests
 from xml.etree import ElementTree
-import time # Import the time module for delays
-from werkzeug.utils import secure_filename
+# import time # Removed: No time module needed if no delay
 
 app = Flask(__name__)
 
@@ -12,6 +11,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'a_super_secret_fallback_key_for_dev_only')
 API_KEY = os.environ.get('LASTFM_API_KEY')
 API_SECRET = os.environ.get('LASTFM_API_SECRET')
+# The CALLBACK_URL will be your Render app's URL + /callback
+# You MUST update this in your Last.fm API application settings after deploying to Render.
 CALLBACK_URL = os.environ.get('LASTFM_CALLBACK_URL', 'http://localhost:5000/callback')
 # --- End of environment variable setup ---
 
@@ -73,12 +74,11 @@ def get_user_info(username):
             for img in data['user']['image']:
                 if img['size'] == 'large' and img['#text']:
                     return img['#text']
-            # Corrected: ensure it iterates over 'image' list for medium size too
             for img in data['user']['image']: 
                 if img['size'] == 'medium' and img['#text']:
                     return img['#text']
     except requests.exceptions.RequestException as e:
-        print(f"error fetching user info for {username}: {e}")
+        print(f"Error fetching user info for {username}: {e}")
     return None
 
 def decode_line(line):
@@ -88,10 +88,10 @@ def decode_line(line):
     except UnicodeDecodeError:
         return line.decode('ISO-8859-1')
 
-def submit_track_batch(tracks_batch, session_key, offset_seconds):
+def submit_track_batch(tracks_batch_dicts, session_key, offset_seconds):
     """
     Submits a batch of tracks (up to 50) to Last.fm using the track.scrobble method.
-    `tracks_batch` is a list of dictionaries, where each dictionary represents a track.
+    `tracks_batch_dicts` is a list of dictionaries, where each dictionary represents a track.
     Returns a list of dictionaries with per-track results.
     """
     params = {
@@ -100,17 +100,41 @@ def submit_track_batch(tracks_batch, session_key, offset_seconds):
         'api_key': API_KEY
     }
 
-    # Build indexed parameters for each track in the batch
-    for i, track_dict in enumerate(tracks_batch):
-        # Ensure the track dictionary has the expected keys
+    # This list will hold only the tracks that are actually sent to Last.fm API
+    tracks_to_scrobble_api = []
+    
+    # First pass: Filter tracks and prepare for API call, and pre-populate skipped results
+    # We maintain a list of results that mirrors the input `tracks_batch_dicts`
+    # to ensure all original tracks get a status (OK, FAIL, or SKIPPED).
+    detailed_batch_results = [] 
+
+    for track_dict in tracks_batch_dicts:
+        # Basic validation for essential keys
         if not all(k in track_dict for k in ['artist', 'album', 'title', 'tracknum', 'duration', 'flag', 'timestamp']):
-            # This track will be marked as skipped in the results
+            detailed_batch_results.append({
+                "track": f"{track_dict.get('artist', 'Unknown')} - {track_dict.get('title', 'Unknown')}",
+                "status": "fail",
+                "error": "invalid track data format (missing keys)"
+            })
             continue 
         
         # Only scrobble tracks with 'L' flag (Loved/Played)
         if track_dict['flag'] != 'L':
+            detailed_batch_results.append({
+                "track": f"{track_dict['artist']} - {track_dict['title']}",
+                "status": "skipped", 
+                "error": "track not marked for scrobble ('L' flag missing)"
+            })
             continue
 
+        tracks_to_scrobble_api.append(track_dict) # Add to the list that will be sent to API
+
+    if not tracks_to_scrobble_api:
+        # If no tracks are valid for scrobbling in this batch, return immediately
+        return detailed_batch_results 
+
+    # Second pass: Build indexed parameters for the tracks that *will* be scrobbled
+    for i, track_dict in enumerate(tracks_to_scrobble_api):
         params[f'artist[{i}]'] = track_dict['artist']
         params[f'album[{i}]'] = track_dict['album']
         params[f'track[{i}]'] = track_dict['title']
@@ -123,51 +147,60 @@ def submit_track_batch(tracks_batch, session_key, offset_seconds):
 
     r = requests.post("https://ws.audioscrobbler.com/2.0/", data=params, headers={"Content-Type": "application/x-www-form-urlencoded"})
     
-    batch_results = []
+    api_response_results = [] # Results specifically from the API response
+    
     if r.status_code != 200:
-        # If the whole batch request fails, mark all tracks in batch as failed
-        error_msg = f"http error for batch: {r.status_code}"
-        for track_dict in tracks_batch:
-            batch_results.append({
+        error_msg = f"HTTP error for batch: {r.status_code}"
+        try:
+            error_xml = ElementTree.fromstring(r.content)
+            err_node = error_xml.find('error')
+            if err_node is not None:
+                error_msg += f" - API Message: {err_node.text}"
+        except ElementTree.ParseError:
+            pass 
+        
+        for track_dict in tracks_to_scrobble_api:
+            api_response_results.append({
                 "track": f"{track_dict['artist']} - {track_dict['title']}",
                 "status": "fail",
                 "error": error_msg
             })
-        return batch_results
+        detailed_batch_results.extend(api_response_results) # Add to overall results
+        return detailed_batch_results
 
     try:
         data = ElementTree.fromstring(r.content)
         if data.attrib.get('status') != 'ok':
             err_node = data.find('error')
-            error_msg = err_node.text if err_node is not None else "unknown api error for batch"
-            for track_dict in tracks_batch:
-                batch_results.append({
+            error_msg = err_node.text if err_node is not None else "unknown API error for batch"
+            for track_dict in tracks_to_scrobble_api:
+                api_response_results.append({
                     "track": f"{track_dict['artist']} - {track_dict['title']}",
                     "status": "fail",
                     "error": error_msg
                 })
-            return batch_results
+            detailed_batch_results.extend(api_response_results)
+            return detailed_batch_results
 
         scrobbles_node = data.find('scrobbles')
         if scrobbles_node is None:
-            # Handle unexpected response structure
-            error_msg = "unexpected api response structure for scrobble batch"
-            for track_dict in tracks_batch:
-                batch_results.append({
+            error_msg = "unexpected API response structure for scrobble batch"
+            for track_dict in tracks_to_scrobble_api:
+                api_response_results.append({
                     "track": f"{track_dict['artist']} - {track_dict['title']}",
                     "status": "fail",
                     "error": error_msg
                 })
-            return batch_results
+            detailed_batch_results.extend(api_response_results)
+            return detailed_batch_results
 
         # Parse individual scrobble results within the batch
         # The API returns scrobbles in the order they were sent
         for i, scrobble_node in enumerate(scrobbles_node.findall('scrobble')):
-            track_info = tracks_batch[i] # Get original track info for display
+            track_info_from_sent_list = tracks_to_scrobble_api[i] 
             
-            # Use data from API response if available, otherwise fallback to original parsed data
-            artist = scrobble_node.find('artist').text if scrobble_node.find('artist') is not None else track_info['artist']
-            track_name = scrobble_node.find('track').text if scrobble_node.find('track') is not None else track_info['title']
+            artist = scrobble_node.find('artist').text if scrobble_node.find('artist') is not None else track_info_from_sent_list['artist']
+            track_name = scrobble_node.find('track').text if scrobble_node.find('track') is not None else track_info_from_sent_list['title']
             
             status = "ok" if scrobble_node.attrib.get('accepted') == '1' else "fail"
             error = None
@@ -176,32 +209,61 @@ def submit_track_batch(tracks_batch, session_key, offset_seconds):
                 error = ignored_message_node.text
                 status = "fail" # Mark as fail if ignored
 
-            batch_results.append({
+            api_response_results.append({
                 "track": f"{artist} - {track_name}",
                 "status": status,
                 "error": error
             })
     except ElementTree.ParseError as e:
-        error_msg = f"xml parsing error: {e}"
-        for track_dict in tracks_batch:
-            batch_results.append({
+        error_msg = f"XML parsing error: {e}"
+        for track_dict in tracks_to_scrobble_api:
+            api_response_results.append({
                 "track": f"{track_dict['artist']} - {track_dict['title']}",
                 "status": "fail",
                 "error": error_msg
             })
     except IndexError:
-        # This can happen if Last.fm returns fewer scrobble results than tracks sent
-        # Fallback to marking remaining tracks as failed
-        error_msg = "mismatched scrobble results count from api"
-        for i in range(len(batch_results), len(tracks_batch)):
-            track_dict = tracks_batch[i]
-            batch_results.append({
+        error_msg = "mismatched scrobble results count from API (some tracks might be missing results)"
+        for i in range(len(api_response_results), len(tracks_to_scrobble_api)):
+            track_dict = tracks_to_scrobble_api[i]
+            api_response_results.append({
                 "track": f"{track_dict['artist']} - {track_dict['title']}",
                 "status": "fail",
                 "error": error_msg
             })
 
-    return batch_results
+    # Merge api_response_results back into detailed_batch_results based on original order
+    # This ensures "skipped" tracks are preserved and API results are added for scrobbled tracks.
+    final_batch_results = []
+    api_result_idx = 0
+    for original_track_dict in tracks_batch_dicts:
+        if original_track_dict['flag'] != 'L':
+            # This track was skipped locally, find its pre-generated result
+            found_skipped = False
+            for res in detailed_batch_results:
+                if res['status'] == 'skipped' and res['track'] == f"{original_track_dict['artist']} - {original_track_dict['title']}":
+                    final_batch_results.append(res)
+                    found_skipped = True
+                    break
+            if not found_skipped: # Fallback if not found (shouldn't happen with correct logic)
+                 final_batch_results.append({
+                    "track": f"{original_track_dict['artist']} - {original_track_dict['title']}",
+                    "status": "fail",
+                    "error": "internal logic error (skipped track result not found)"
+                })
+        else:
+            # This track was sent to the API, get its result from api_response_results
+            if api_result_idx < len(api_response_results):
+                final_batch_results.append(api_response_results[api_result_idx])
+                api_result_idx += 1
+            else:
+                final_batch_results.append({
+                    "track": f"{original_track_dict['artist']} - {original_track_dict['title']}",
+                    "status": "fail",
+                    "error": "internal logic error (API result missing for scrobbled track)"
+                })
+
+    return final_batch_results
 
 
 @app.route('/')
@@ -289,6 +351,7 @@ def submit_scrobbles():
     all_results = []
     total_success = 0
     total_failure = 0
+    total_skipped = 0 # Track skipped count
     
     # Chunk tracks into batches of 50
     BATCH_SIZE = 50
@@ -303,14 +366,14 @@ def submit_scrobbles():
             all_results.append(result)
             if result['status'] == 'ok':
                 total_success += 1
-            else:
+            elif result['status'] == 'skipped':
+                total_skipped += 1
+            else: # status == 'fail'
                 total_failure += 1
         
-        # Add a delay between batches to respect Last.fm's rate limits
-        if i + BATCH_SIZE < len(tracks): # Don't sleep after the last batch
-            time.sleep(1) # Wait for 1 second between batches
+        # Removed: time.sleep(1) # No delay between batches
 
-    return jsonify({"success": total_success, "failure": total_failure, "results": all_results})
+    return jsonify({"success": total_success, "failure": total_failure, "skipped": total_skipped, "results": all_results})
 
 if __name__ == '__main__':
     app.run(debug=True)
