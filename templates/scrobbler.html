@@ -64,34 +64,47 @@
         .upload-form { /* Renamed from 'form' to be more specific */
             margin-bottom: 20px; /* Reduced margin */
             padding: 20px; /* Reduced padding */
-            /* Removed border, background-color, box-shadow to match image's minimalist look */
             width: 100%;
-            max-width: 400px; /* Slightly reduced max-width for a tighter form */
+            max-width: 500px; /* Adjusted max-width to allow side-by-side elements */
             text-align: center;
+            display: flex; /* Make form a flex container */
+            flex-direction: column; /* Stack label and input-group vertically */
+            align-items: center; /* Center items horizontally */
         }
 
         .upload-form label {
             display: block;
-            margin-bottom: 5px; /* Reduced margin */
+            margin-bottom: 10px; /* Space between label and input group */
             font-weight: 500;
-            font-size: 1.1em; /* Slightly smaller font size for label */
+            font-size: 1.1em;
             color: #f0f0f0;
             text-transform: lowercase;
+            text-align: center;
+        }
+
+        .file-input-group { /* New wrapper for file input and upload button */
+            display: flex;
+            align-items: center; /* Vertically align input and button */
+            gap: 10px; /* Space between input and button */
+            width: 100%; /* Take full width of parent form */
+            max-width: 400px; /* Limit width of the input group */
+            box-sizing: border-box;
         }
 
         .upload-form input[type="file"] {
+            flex-grow: 1; /* Allow input to take available space */
             padding: 5px 10px; /* Reduced padding */
             border: none;
-            border-radius: 20px; /* Slightly less rounded */
+            border-radius: 20px;
             background-color: #333;
             color: #f0f0f0;
-            font-size: 0.9em; /* Slightly smaller font size */
-            width: calc(100% - 30px); /* Adjust width for padding */
+            font-size: 0.9em;
             box-sizing: border-box;
-            margin-bottom: 10px; /* Reduced margin */
             outline: none;
             text-align: center;
             cursor: pointer;
+            margin-bottom: 0; /* Remove bottom margin as it's in a flex row */
+            width: auto; /* Let flexbox handle width */
         }
 
         /* Styling for the file input button (browser default styling is hard to change directly,
@@ -106,17 +119,17 @@
             content: 'choose file';
             display: inline-block;
             background: #333;
-            border-radius: 20px; /* Slightly less rounded */
-            padding: 12px 15px; /* Reduced padding */
+            border-radius: 20px;
+            padding: 10px 10px; /* Padding for the custom button text */
             outline: none;
             white-space: nowrap;
             -webkit-user-select: none;
             cursor: pointer;
             color: #f0f0f0;
-            font-size: 0.9em; /* Slightly smaller font size */
+            font-size: 0.9em;
             font-weight: normal;
             text-transform: lowercase;
-            width: 100%;
+            width: 100%; /* Make the custom button fill the input width */
             box-sizing: border-box;
         }
         .upload-form input[type="file"]:hover::before {
@@ -128,7 +141,8 @@
 
 
         .upload-button { /* Renamed from 'button' to be more specific */
-            padding: 12px 15px; /* Adjusted padding to match file input's ::before */
+            flex-shrink: 0; /* Prevent button from shrinking */
+            padding: 5px 20px; /* Adjusted padding to match file input's ::before height */
             background-color: #e53935;
             color: white;
             border: none;
@@ -137,13 +151,15 @@
             font-size: 0.9em; /* Adjusted font-size to match file input's ::before */
             font-weight: bold;
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Reduced shadow */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
             text-transform: lowercase;
+            margin: 0; /* Remove auto margins as it's in a flex row */
+            width: auto; /* Let flexbox handle width */
         }
 
         .upload-button:hover {
             background-color: #c62828;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); /* Reduced shadow */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
         }
 
         /* Styles for the tracks loaded section */
@@ -151,7 +167,7 @@
             display: flex; /* Use flexbox for the main layout */
             flex-direction: row; /* Default to row layout */
             justify-content: center; /* Center horizontally */
-            align-items: flex-start; /* Align items to the top */
+            align-items: center; /* Vertically center columns */
             width: 100%;
             max-width: 1200px; /* Increased max-width to accommodate side-by-side layout */
             margin: 0 auto;
@@ -193,7 +209,7 @@
         }
 
         .offset-input {
-            padding: 12px 15px; /* Similar padding to buttons/inputs */
+            padding: 5px 15px; /* Similar padding to buttons/inputs */
             border: none;
             border-radius: 20px;
             background-color: #333;
@@ -201,14 +217,14 @@
             font-size: 0.9em;
             width: calc(100% - 30px); /* Adjust width for padding */
             box-sizing: border-box;
-            margin: 0 auto 20px auto; /* Centered with margin auto, reduced bottom margin */
+            margin: 0 auto 5px auto; /* Centered with margin auto, reduced bottom margin */
             outline: none;
             text-align: center;
             display: block; /* Make it a block element to allow margin auto centering */
         }
 
         .submit-button { /* New class for the "upload to last.fm" button */
-            padding: 12px 30px; /* Adjusted padding */
+            padding: 5px 15px; /* Adjusted padding */
             background-color: #e53935;
             color: white;
             border: none;
@@ -240,7 +256,7 @@
 
         .table-container {
             width: 100%;
-            max-height: 400px;
+            max-height: 400px; /* Defines the height of the tracks table */
             overflow-y: auto;
             overflow-x: auto;
             border-radius: 10px; /* More rounded corners for the main containers */
@@ -305,15 +321,16 @@
         }
 
         #results {
-            padding: 15px; /* Reduced padding */
+            padding: 15px; /* Matches table-container padding */
             background-color: #2a2a2a;
-            border-radius: 10px; /* More rounded corners */
+            border-radius: 10px; /* Matches table-container border-radius */
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             width: 100%;
             text-align: left;
-            flex-grow: 1; /* Allow it to grow */
-            min-height: 150px; /* Minimum height for results area */
+            max-height: 400px; /* Set max-height to match table-container */
+            overflow-y: auto; /* Make it scrollable */
             box-sizing: border-box;
+            /* Removed flex-grow and min-height as max-height and overflow are now primary */
         }
 
         #results p {
@@ -399,6 +416,7 @@
             #results {
                 padding: 10px;
                 margin-top: 10px;
+                max-height: 300px; /* Adjust max-height for mobile results */
             }
             #results p {
                 font-size: 0.9em;
@@ -428,7 +446,7 @@
         let uploadStatusDiv = document.getElementById('upload-status');
         let progressBarContainer = document.getElementById('progress-bar-container');
         let progressBar = document.getElementById('progress-bar');
-        let submitButton = document.querySelector('.submit-button'); /* Changed selector */
+        let submitButton = document.querySelector('.submit-button');
 
         // Disable button during upload
         submitButton.disabled = true;
@@ -437,7 +455,6 @@
         // Clear previous results and show loading indicators
         output.innerHTML = '';
         uploadStatusDiv.textContent = 'Uploading... Please wait.';
-        // progressBarContainer.style.display = 'block'; // Removed: always visible
         progressBar.style.width = '0%';
 
         try {
@@ -453,7 +470,7 @@
                 uploadStatusDiv.textContent = 'Upload failed!';
                 progressBar.style.width = '0%'; // Reset on failure
                 submitButton.disabled = false;
-                submitButton.textContent = 'upload to last.fm'; /* Changed text */
+                submitButton.textContent = 'upload to last.fm';
                 return;
             }
 
@@ -487,19 +504,13 @@
 
             // Re-enable button and reset text
             submitButton.disabled = false;
-            submitButton.textContent = 'upload to last.fm'; /* Changed text */
-
-            // Optionally hide progress bar after a short delay
-            // setTimeout(() => { // Removed: always visible
-            //     progressBarContainer.style.display = 'none';
-            // }, 2000); 
+            submitButton.textContent = 'upload to last.fm';
             
         } catch (err) {
             output.innerHTML = `<p class="red">Error submitting scrobbles: ${err.message || err}</p>`;
             uploadStatusDiv.textContent = 'Upload failed due to network error!';
-            // progressBarContainer.style.display = 'none'; // Removed: always visible
             submitButton.disabled = false;
-            submitButton.textContent = 'upload to last.fm'; /* Changed text */
+            submitButton.textContent = 'upload to last.fm';
             console.error('Error submitting scrobbles:', err);
         }
     }
@@ -519,8 +530,10 @@
         {% if not tracks %}
         <form method="post" enctype="multipart/form-data" class="upload-form">
             <label>upload your .scrobbler.log file:</label>
-            <input type="file" name="file" accept=".log" required>
-            <button type="submit" class="upload-button">upload</button>
+            <div class="file-input-group">
+                <input type="file" name="file" accept=".log" required>
+                <button type="submit" class="upload-button">upload</button>
+            </div>
         </form>
         {% else %}
         <div class="tracks-section-container">
