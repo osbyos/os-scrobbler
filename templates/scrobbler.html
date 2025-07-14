@@ -165,6 +165,31 @@
         }
         .green { color: #66bb6a; } /* Softer green for success */
         .red { color: #ef5350; } /* Softer red for failure */
+
+        /* Styles for upload status and progress bar */
+        #upload-status {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #b0b0b0;
+            text-align: center;
+        }
+        #progress-bar-container {
+            width: 100%;
+            max-width: 1000px; /* Match results container width */
+            background-color: #333;
+            border-radius: 5px;
+            margin-top: 10px;
+            height: 10px;
+            display: none; /* Hidden by default */
+            overflow: hidden;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #e53935; /* Last.fm red */
+            border-radius: 5px;
+            transition: width 0.1s ease-in-out; /* Smooth transition for progress */
+        }
     </style>
     <script>
     function adjustTimestamps() {
@@ -182,20 +207,68 @@
             row.querySelector('.adjusted').textContent = adjustedDate.toLocaleString();
         });
     }
-    function submitScrobbles() {
+
+    // Made submitScrobbles async to allow for await in the loop
+    async function submitScrobbles() {
         let offset = parseInt(document.getElementById('offset').value) || 0;
-        fetch('/submit_scrobbles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({offset_hours: offset})
-        }).then(resp => resp.json()).then(data => {
-            let output = document.getElementById('results');
-            output.innerHTML = `<p>Success: ${data.success}, Failed: ${data.failure}</p>`;
-            data.results.forEach(r => {
-                let color = r.status === 'ok' ? 'green' : 'red';
-                output.innerHTML += `<p style="color:${color}">${r.track}: ${r.status.toUpperCase()} ${r.error ? '- ' + r.error : ''}</p>`;
+        let output = document.getElementById('results');
+        let uploadStatusDiv = document.getElementById('upload-status');
+        let progressBarContainer = document.getElementById('progress-bar-container');
+        let progressBar = document.getElementById('progress-bar');
+
+        // Clear previous results and show loading indicators
+        output.innerHTML = '';
+        uploadStatusDiv.textContent = 'Uploading... Please wait.';
+        progressBarContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+
+        try {
+            const resp = await fetch('/submit_scrobbles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({offset_hours: offset})
             });
-        }).catch(err => alert('Error submitting scrobbles: ' + err));
+            const data = await resp.json();
+
+            if (data.error) {
+                output.innerHTML = `<p class="red">Error: ${data.error}</p>`;
+                uploadStatusDiv.textContent = 'Upload failed!';
+                progressBar.style.width = '0%'; // Reset on failure
+                return;
+            }
+
+            let totalTracks = data.results.length;
+            let currentTrackCount = 0;
+
+            // Iterate and display results with a small delay for visual progress
+            for (const r of data.results) {
+                currentTrackCount++;
+                let color = r.status === 'ok' ? 'green' : (r.status === 'skipped' ? '#b0b0b0' : 'red'); // Grey for skipped
+                output.innerHTML += `<p style="color:${color}">${r.track}: ${r.status.toUpperCase()} ${r.error ? '- ' + r.error : ''}</p>`;
+                
+                let progress = (currentTrackCount / totalTracks) * 100;
+                progressBar.style.width = `${progress.toFixed(0)}%`;
+                uploadStatusDiv.textContent = `Uploading track ${currentTrackCount} of ${totalTracks}...`;
+
+                // Small delay to make progress visible
+                await new Promise(resolve => setTimeout(resolve, 10)); 
+            }
+
+            // Final status update
+            uploadStatusDiv.textContent = `Upload complete! Success: ${data.success}, Failed: ${data.failure}, Skipped: ${data.skipped || 0}`;
+            progressBar.style.width = '100%';
+
+            // Optionally hide progress bar after a short delay
+            setTimeout(() => {
+                progressBarContainer.style.display = 'none';
+            }, 2000); // Hide after 2 seconds
+            
+        } catch (err) {
+            output.innerHTML = `<p class="red">Error submitting scrobbles: ${err.message || err}</p>`;
+            uploadStatusDiv.textContent = 'Upload failed due to network error!';
+            progressBarContainer.style.display = 'none'; // Hide on network error
+            console.error('Error submitting scrobbles:', err);
+        }
     }
     window.onload = adjustTimestamps;
     </script>
@@ -238,6 +311,12 @@
         </div> {# End of table-container #}
     </div> {# End of tracks-section-container #}
     <button onclick="submitScrobbles()">upload adjusted scrobbles</button> {# Changed text to lowercase #}
+    
+    <div id="upload-status"></div> {# Status message for upload progress #}
+    <div id="progress-bar-container"> {# Container for the progress bar #}
+        <div id="progress-bar"></div> {# Actual progress bar #}
+    </div>
+
     <div id="results"></div>
     {% endif %}
 </body>
