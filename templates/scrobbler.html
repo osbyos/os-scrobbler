@@ -162,23 +162,24 @@
         .left-column {
             display: flex;
             flex-direction: column;
-            align-items: flex-start; /* Left-align items within this column */
+            align-items: center; /* Center items within this column */
             flex-shrink: 0; /* Prevent shrinking */
             width: 300px; /* Fixed width for the left column */
-            text-align: left; /* Ensure text is left-aligned */
+            text-align: center; /* Center text within this column */
         }
 
         .left-column h3 {
             margin-bottom: 5px; /* Tighter spacing */
-            text-align: left; /* Ensure left alignment */
+            text-align: center; /* Ensure center alignment */
         }
 
         .track-count-text {
             font-size: 0.9em;
             color: #b0b0b0;
-            margin-top: 0;
+            margin-top: 5px; /* Space after h3 */
             margin-bottom: 20px; /* Space after track count */
             text-transform: lowercase;
+            text-align: center; /* Ensure center alignment */
         }
 
         .offset-label {
@@ -188,6 +189,7 @@
             font-size: 1.1em;
             color: #f0f0f0;
             text-transform: lowercase;
+            text-align: center; /* Ensure center alignment */
         }
 
         .offset-input {
@@ -199,9 +201,10 @@
             font-size: 0.9em;
             width: calc(100% - 30px); /* Adjust width for padding */
             box-sizing: border-box;
-            margin-bottom: 20px; /* Space below offset input */
+            margin: 0 auto 20px auto; /* Centered with margin auto, reduced bottom margin */
             outline: none;
             text-align: center;
+            display: block; /* Make it a block element to allow margin auto centering */
         }
 
         .submit-button { /* New class for the "upload to last.fm" button */
@@ -218,7 +221,8 @@
             text-transform: lowercase;
             width: 100%; /* Make button full width of its column */
             max-width: 200px; /* Limit its max width */
-            margin-top: 10px; /* Space above button */
+            margin: 10px auto 0 auto; /* Centered with margin auto, reduced top margin */
+            display: block; /* Make it a block element to allow margin auto centering */
         }
 
         .submit-button:hover {
@@ -286,7 +290,7 @@
             background-color: #333;
             border-radius: 10px; /* More rounded corners */
             height: 15px; /* Increased height */
-            display: none;
+            display: block; /* Always display the progress bar */
             overflow: hidden;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Added shadow */
             padding: 5px; /* Padding inside the container */
@@ -433,7 +437,7 @@
         // Clear previous results and show loading indicators
         output.innerHTML = '';
         uploadStatusDiv.textContent = 'Uploading... Please wait.';
-        progressBarContainer.style.display = 'block';
+        // progressBarContainer.style.display = 'block'; // Removed: always visible
         progressBar.style.width = '0%';
 
         try {
@@ -486,14 +490,14 @@
             submitButton.textContent = 'upload to last.fm'; /* Changed text */
 
             // Optionally hide progress bar after a short delay
-            setTimeout(() => {
-                progressBarContainer.style.display = 'none';
-            }, 2000); // Hide after 2 seconds
+            // setTimeout(() => { // Removed: always visible
+            //     progressBarContainer.style.display = 'none';
+            // }, 2000); 
             
         } catch (err) {
             output.innerHTML = `<p class="red">Error submitting scrobbles: ${err.message || err}</p>`;
             uploadStatusDiv.textContent = 'Upload failed due to network error!';
-            progressBarContainer.style.display = 'none'; // Hide on network error
+            // progressBarContainer.style.display = 'none'; // Removed: always visible
             submitButton.disabled = false;
             submitButton.textContent = 'upload to last.fm'; /* Changed text */
             console.error('Error submitting scrobbles:', err);
