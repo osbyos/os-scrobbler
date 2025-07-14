@@ -4,191 +4,401 @@
     <title>Scrobbler - {{ username }}</title>
     <style>
         body {
-            font-family: "Helvetica", Arial, sans-serif; /* Changed to Helvetica */
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; /* Prioritize Helvetica Neue, then Helvetica */
             background-color: #1a1a1a; /* Dark background */
             color: #f0f0f0; /* Light text color */
             margin: 0;
-            padding: 20px;
-            padding-top: 70px; /* Add padding to push content down, away from the fixed header */
+            padding: 0; /* Remove default body padding */
             display: flex;
             flex-direction: column;
+            justify-content: space-between; /* Push footer to bottom */
             align-items: center; /* Center content horizontally */
             min-height: 100vh;
             box-sizing: border-box; /* Include padding in element's total width and height */
             position: relative; /* Needed for absolute positioning of .user-info */
         }
         
-        /* New styles for user info in top-right */
+        /* User Info (top-right) - unchanged from previous version */
         .user-info {
             position: absolute;
             top: 20px;
             right: 20px;
-            display: flex; /* Use flexbox to align image and text */
-            align-items: center; /* Vertically center items */
-            gap: 8px; /* Slightly reduced space between image and text */
-            color: #f0f0f0; /* Ensure text color is light */
-            font-size: 0.9em; /* Smaller font size */
-            font-weight: normal; /* Not bold */
-            z-index: 10; /* Ensure it stays on top of other content */
-            text-transform: lowercase; /* Added lowercase transformation */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #f0f0f0;
+            font-size: 0.9em;
+            font-weight: normal;
+            z-index: 10;
+            text-transform: lowercase;
         }
 
         .user-info .pfp {
-            width: 30px; /* Smaller size */
-            height: 30px; /* Smaller size */
-            border-radius: 50%; /* Make it circular */
-            border: 1px solid #555; /* Subtle border */
-            object-fit: cover; /* Ensure image covers the area without distortion */
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1px solid #555;
+            object-fit: cover;
+        }
+
+        /* Main content wrapper to center the form/table */
+        .main-content-wrapper {
+            flex-grow: 1; /* Allows this to take up available space */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Vertically center content */
+            align-items: center; /* Horizontally center content */
+            width: 100%;
+            padding: 20px; /* Add some padding around the content */
+            box-sizing: border-box;
         }
 
         h1, h3 {
-            color: #f0f0f0; /* Light text for headings */
-            text-align: center; /* Centered headings */
-            margin-bottom: 20px;
-            text-transform: lowercase; /* Added lowercase transformation */
+            color: #f0f0f0;
+            text-align: center;
+            margin-bottom: 15px; /* Reduced margin */
+            text-transform: lowercase;
         }
 
-        form {
-            margin-bottom: 30px;
-            padding: 30px;
-            border: 1px solid #333; /* Darker border */
-            border-radius: 10px;
-            background-color: #2a2a2a; /* Slightly lighter dark for form background */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        /* Styles for the upload form */
+        .upload-form { /* Renamed from 'form' to be more specific */
+            margin-bottom: 20px; /* Reduced margin */
+            padding: 20px; /* Reduced padding */
+            /* Removed border, background-color, box-shadow to match image's minimalist look */
             width: 100%;
-            max-width: 500px; /* Kept form width as is, as it's a control element */
+            max-width: 400px; /* Slightly reduced max-width for a tighter form */
             text-align: center;
         }
 
-        label {
+        .upload-form label {
             display: block;
-            margin-bottom: 10px; /* Reduced from 15px to 10px */
-            font-weight: bold;
-            color: #b0b0b0; /* Consistent subtitle color */
-            text-transform: lowercase; /* Added lowercase transformation */
+            margin-bottom: 5px; /* Reduced margin */
+            font-weight: 500;
+            font-size: 1.1em; /* Slightly smaller font size for label */
+            color: #f0f0f0;
+            text-transform: lowercase;
         }
 
-        input[type="file"], input[type="number"] {
-            padding: 10px;
-            margin-right: 15px;
-            border: 1px solid #555;
-            border-radius: 5px;
-            background-color: #3a3a3a; /* Dark input background */
-            color: #f0f0f0; /* Light input text */
-            font-size: 1em;
+        .upload-form input[type="file"] {
+            padding: 5px 10px; /* Reduced padding */
+            border: none;
+            border-radius: 20px; /* Slightly less rounded */
+            background-color: #333;
+            color: #f0f0f0;
+            font-size: 0.9em; /* Slightly smaller font size */
             width: calc(100% - 30px); /* Adjust width for padding */
-            box-sizing: border-box; /* Include padding in width */
-            margin-bottom: 15px;
+            box-sizing: border-box;
+            margin-bottom: 10px; /* Reduced margin */
+            outline: none;
+            text-align: center;
+            cursor: pointer;
         }
 
-        button {
-            padding: 12px 30px;
-            background-color: #e53935; /* Last.fm red-ish color */
+        /* Styling for the file input button (browser default styling is hard to change directly,
+           this targets the text next to the "Choose File" button) */
+        .upload-form input[type="file"]::-webkit-file-upload-button {
+            visibility: hidden;
+            width: 0;
+            padding: 0;
+            margin: 0;
+        }
+        .upload-form input[type="file"]::before {
+            content: 'choose file';
+            display: inline-block;
+            background: #333;
+            border-radius: 20px; /* Slightly less rounded */
+            padding: 12px 15px; /* Reduced padding */
+            outline: none;
+            white-space: nowrap;
+            -webkit-user-select: none;
+            cursor: pointer;
+            color: #f0f0f0;
+            font-size: 0.9em; /* Slightly smaller font size */
+            font-weight: normal;
+            text-transform: lowercase;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .upload-form input[type="file"]:hover::before {
+            background-color: #444;
+        }
+        .upload-form input[type="file"]:active::before {
+            background-color: #555;
+        }
+
+
+        .upload-button { /* Renamed from 'button' to be more specific */
+            padding: 12px 15px; /* Adjusted padding to match file input's ::before */
+            background-color: #e53935;
             color: white;
             border: none;
-            border-radius: 20px; /* Rounded button */
+            border-radius: 20px; /* Adjusted border-radius to match file input's ::before */
             cursor: pointer;
-            font-size: 1.1em;
+            font-size: 0.9em; /* Adjusted font-size to match file input's ::before */
             font-weight: bold;
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            margin-top: 20px; /* Added space above the button */
-            text-transform: lowercase; /* Added lowercase transformation */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Reduced shadow */
+            text-transform: lowercase;
         }
 
-        button:hover {
-            background-color: #c62828; /* Darker red on hover */
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        .upload-button:hover {
+            background-color: #c62828;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); /* Reduced shadow */
         }
 
-        /* New container for the "Tracks loaded" section to ensure proper centering */
+        /* Styles for the tracks loaded section */
         .tracks-section-container {
-            width: 100%; /* Take full width */
-            max-width: 1000px; /* Match the max-width of the table-container */
-            margin: 0 auto; /* Center this entire section */
-            text-align: center; /* Center content within this container */
+            display: flex; /* Use flexbox for the main layout */
+            flex-direction: row; /* Default to row layout */
+            justify-content: center; /* Center horizontally */
+            align-items: flex-start; /* Align items to the top */
+            width: 100%;
+            max-width: 1200px; /* Increased max-width to accommodate side-by-side layout */
+            margin: 0 auto;
+            gap: 40px; /* Space between left and right columns */
+            padding-bottom: 50px; /* Add padding at the bottom for footer spacing */
         }
 
-        /* Container for the table to enable scrolling and set max-width */
+        .left-column {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* Left-align items within this column */
+            flex-shrink: 0; /* Prevent shrinking */
+            width: 300px; /* Fixed width for the left column */
+            text-align: left; /* Ensure text is left-aligned */
+        }
+
+        .left-column h3 {
+            margin-bottom: 5px; /* Tighter spacing */
+            text-align: left; /* Ensure left alignment */
+        }
+
+        .track-count-text {
+            font-size: 0.9em;
+            color: #b0b0b0;
+            margin-top: 0;
+            margin-bottom: 20px; /* Space after track count */
+            text-transform: lowercase;
+        }
+
+        .offset-label {
+            display: block;
+            margin-bottom: 5px; /* Tighter spacing */
+            font-weight: 500;
+            font-size: 1.1em;
+            color: #f0f0f0;
+            text-transform: lowercase;
+        }
+
+        .offset-input {
+            padding: 12px 15px; /* Similar padding to buttons/inputs */
+            border: none;
+            border-radius: 20px;
+            background-color: #333;
+            color: #f0f0f0;
+            font-size: 0.9em;
+            width: calc(100% - 30px); /* Adjust width for padding */
+            box-sizing: border-box;
+            margin-bottom: 20px; /* Space below offset input */
+            outline: none;
+            text-align: center;
+        }
+
+        .submit-button { /* New class for the "upload to last.fm" button */
+            padding: 12px 30px; /* Adjusted padding */
+            background-color: #e53935;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em; /* Adjusted font size */
+            font-weight: bold;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            text-transform: lowercase;
+            width: 100%; /* Make button full width of its column */
+            max-width: 200px; /* Limit its max width */
+            margin-top: 10px; /* Space above button */
+        }
+
+        .submit-button:hover {
+            background-color: #c62828;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1; /* Allow to take remaining space */
+            gap: 20px; /* Space between table, progress bar, and results */
+            width: calc(100% - 340px); /* Adjust width based on left column and gap */
+        }
+
         .table-container {
-            width: 100%; /* Take full width of its parent (.tracks-section-container) */
-            max-height: 500px; /* Set max height for 25 tracks (approx) */
-            overflow-y: auto; /* Enable vertical scrolling */
-            overflow-x: auto; /* Keep horizontal scrolling for wide content */
-            margin-top: 10px; /* Reduced from 20px to 10px */
-            border-radius: 10px; /* Match table border-radius */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Match table shadow */
-            background-color: #2a2a2a; /* Match table background */
+            width: 100%;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;
+            border-radius: 10px; /* More rounded corners for the main containers */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            background-color: #2a2a2a;
+            padding: 15px; /* Padding inside the container */
+            box-sizing: border-box;
         }
 
         table {
-            width: 100%; /* Make table fill its container */
+            width: 100%;
             border-collapse: collapse;
-            background-color: #2a2a2a; /* Darker background for table */
-            margin-bottom: 0; /* Remove bottom margin from table itself to prevent double margin with container */
+            background-color: #2a2a2a;
+            margin-bottom: 0;
         }
 
         th, td {
-            border: 1px solid #333; /* Darker border for table cells */
-            padding: 15px;
+            border: 1px solid #333;
+            padding: 10px; /* Reduced padding */
             text-align: left;
-            color: #f0f0f0; /* Light text color */
-            white-space: nowrap; /* Prevent text wrapping in table cells */
+            color: #f0f0f0;
+            white-space: nowrap;
         }
 
         th {
-            background-color: #3a3a3a; /* Slightly lighter dark for table header */
+            background-color: #3a3a3a;
             font-weight: bold;
-            position: sticky; /* Make table header sticky */
-            top: 0; /* Stick to the top of the scrollable container */
-            z-index: 1; /* Ensure header is above scrolling content */
-            text-transform: lowercase; /* Added lowercase transformation */
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            text-transform: lowercase;
         }
 
         tr:nth-child(even) {
-            background-color: #2f2f2f; /* Alternate row background */
+            background-color: #2f2f2f;
         }
-
-        #results {
-            margin-top: 20px;
-            padding: 20px;
-            background-color: #2a2a2a;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            max-width: 1000px; /* Increased max-width for the results area */
-            text-align: left;
-        }
-
-        #results p {
-            margin: 5px 0;
-        }
-        .green { color: #66bb6a; } /* Softer green for success */
-        .red { color: #ef5350; } /* Softer red for failure */
 
         /* Styles for upload status and progress bar */
         #upload-status {
-            margin-top: 15px;
+            margin-top: 0; /* Adjusted margin as it's inside right-column now */
             font-weight: bold;
             color: #b0b0b0;
             text-align: center;
         }
         #progress-bar-container {
             width: 100%;
-            max-width: 1000px; /* Match results container width */
             background-color: #333;
-            border-radius: 5px;
-            margin-top: 10px;
-            height: 10px;
-            display: none; /* Hidden by default */
+            border-radius: 10px; /* More rounded corners */
+            height: 15px; /* Increased height */
+            display: none;
             overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Added shadow */
+            padding: 5px; /* Padding inside the container */
+            box-sizing: border-box;
         }
         #progress-bar {
             width: 0%;
             height: 100%;
-            background-color: #e53935; /* Last.fm red */
-            border-radius: 5px;
-            transition: width 0.1s ease-in-out; /* Smooth transition for progress */
+            background-color: #e53935;
+            border-radius: 5px; /* Slightly less rounded than container */
+            transition: width 0.1s ease-in-out;
+        }
+
+        #results {
+            padding: 15px; /* Reduced padding */
+            background-color: #2a2a2a;
+            border-radius: 10px; /* More rounded corners */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            text-align: left;
+            flex-grow: 1; /* Allow it to grow */
+            min-height: 150px; /* Minimum height for results area */
+            box-sizing: border-box;
+        }
+
+        #results p {
+            margin: 4px 0;
+            font-size: 0.9em; /* Smaller font size for results lines */
+        }
+        .green { color: #66bb6a; }
+        .red { color: #ef5350; }
+        .skipped { color: #b0b0b0; }
+
+        /* Footer styles - consistent with index.html */
+        .footer {
+            font-size: 0.8em;
+            color: #555;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .footer a {
+            color: #555;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: #f0f0f0;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                padding-top: 80px;
+            }
+            .tracks-section-container {
+                flex-direction: column; /* Stack columns vertically on mobile */
+                gap: 30px; /* Space between stacked columns */
+                align-items: center; /* Center stacked columns */
+            }
+            .left-column {
+                width: 100%; /* Full width for left column on mobile */
+                align-items: center; /* Center items in left column */
+                text-align: center; /* Center text in left column */
+            }
+            .offset-input, .submit-button {
+                width: calc(100% - 40px); /* Adjust width for mobile padding */
+                max-width: 250px; /* Keep a reasonable max width */
+            }
+            .right-column {
+                width: 100%; /* Full width for right column on mobile */
+            }
+            h3 {
+                margin-bottom: 10px;
+            }
+            .upload-form label {
+                font-size: 0.9em;
+                margin-bottom: 10px;
+            }
+            .upload-form input[type="file"] {
+                padding: 10px 12px;
+                font-size: 0.8em;
+                margin-bottom: 15px;
+            }
+            .upload-form input[type="file"]::before {
+                padding: 10px 12px;
+                font-size: 0.8em;
+            }
+            .upload-button {
+                padding: 10px 25px;
+                font-size: 0.9em;
+            }
+            .user-info {
+                top: 10px;
+                right: 10px;
+            }
+            th, td {
+                padding: 8px;
+                font-size: 0.9em;
+            }
+            .table-container {
+                max-height: 300px;
+            }
+            #results {
+                padding: 10px;
+                margin-top: 10px;
+            }
+            #results p {
+                font-size: 0.9em;
+            }
         }
     </style>
     <script>
@@ -208,13 +418,17 @@
         });
     }
 
-    // Made submitScrobbles async to allow for await in the loop
     async function submitScrobbles() {
         let offset = parseInt(document.getElementById('offset').value) || 0;
         let output = document.getElementById('results');
         let uploadStatusDiv = document.getElementById('upload-status');
         let progressBarContainer = document.getElementById('progress-bar-container');
         let progressBar = document.getElementById('progress-bar');
+        let submitButton = document.querySelector('.submit-button'); /* Changed selector */
+
+        // Disable button during upload
+        submitButton.disabled = true;
+        submitButton.textContent = 'uploading...';
 
         // Clear previous results and show loading indicators
         output.innerHTML = '';
@@ -234,6 +448,8 @@
                 output.innerHTML = `<p class="red">Error: ${data.error}</p>`;
                 uploadStatusDiv.textContent = 'Upload failed!';
                 progressBar.style.width = '0%'; // Reset on failure
+                submitButton.disabled = false;
+                submitButton.textContent = 'upload to last.fm'; /* Changed text */
                 return;
             }
 
@@ -243,8 +459,15 @@
             // Iterate and display results with a small delay for visual progress
             for (const r of data.results) {
                 currentTrackCount++;
-                let color = r.status === 'ok' ? 'green' : (r.status === 'skipped' ? '#b0b0b0' : 'red'); // Grey for skipped
-                output.innerHTML += `<p style="color:${color}">${r.track}: ${r.status.toUpperCase()} ${r.error ? '- ' + r.error : ''}</p>`;
+                let colorClass = '';
+                if (r.status === 'ok') {
+                    colorClass = 'green';
+                } else if (r.status === 'skipped') {
+                    colorClass = 'skipped';
+                } else { // status === 'fail'
+                    colorClass = 'red';
+                }
+                output.innerHTML += `<p class="track-result ${colorClass}">${r.track}: ${r.status.toUpperCase()} ${r.error ? '- ' + r.error : ''}</p>`;
                 
                 let progress = (currentTrackCount / totalTracks) * 100;
                 progressBar.style.width = `${progress.toFixed(0)}%`;
@@ -258,6 +481,10 @@
             uploadStatusDiv.textContent = `Upload complete! Success: ${data.success}, Failed: ${data.failure}, Skipped: ${data.skipped || 0}`;
             progressBar.style.width = '100%';
 
+            // Re-enable button and reset text
+            submitButton.disabled = false;
+            submitButton.textContent = 'upload to last.fm'; /* Changed text */
+
             // Optionally hide progress bar after a short delay
             setTimeout(() => {
                 progressBarContainer.style.display = 'none';
@@ -267,6 +494,8 @@
             output.innerHTML = `<p class="red">Error submitting scrobbles: ${err.message || err}</p>`;
             uploadStatusDiv.textContent = 'Upload failed due to network error!';
             progressBarContainer.style.display = 'none'; // Hide on network error
+            submitButton.disabled = false;
+            submitButton.textContent = 'upload to last.fm'; /* Changed text */
             console.error('Error submitting scrobbles:', err);
         }
     }
@@ -278,46 +507,56 @@
         {% if pfp_url %}
             <img src="{{ pfp_url }}" alt="User Profile Picture" class="pfp">
         {% endif %}
-        <p>logged in as: {{ username }}</p> {# Changed text to lowercase #}
+        <p>logged in as: {{ username }}</p>
     </div>
 
     {# The main content of the scrobbler page starts here #}
-    {% if not tracks %}
-    <form method="post" enctype="multipart/form-data">
-        <h3>upload your .scrobbler.log file:</h3> {# Changed text to lowercase #}
-        <input type="file" name="file" accept=".log" required>
-        <button type="submit">parse</button> {# Changed text to lowercase #}
-    </form>
-    {% else %}
-    <div class="tracks-section-container"> {# New container to center this entire section #}
-        <h3>tracks loaded: {{ tracks|length }}</h3> {# Changed text to lowercase #}
-        <label>timezone offset (hours): 
-            <input type="number" id="offset" value="0" onchange="adjustTimestamps()">
-        </label>
-        <div class="table-container"> {# New container for the table #}
-            <table id="track-table">
-                <thead><tr><th>artist</th><th>title</th><th>original timestamp (local)</th><th>adjusted timestamp (local)</th></tr></thead> {# Changed text to lowercase #}
-                <tbody>
-                    {% for t in tracks %}
-                    <tr data-timestamp="{{ t.timestamp }}">
-                        <td>{{ t.artist }}</td>
-                        <td>{{ t.title }}</td>
-                        <td class="original"></td>
-                        <td class="adjusted"></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div> {# End of table-container #}
-    </div> {# End of tracks-section-container #}
-    <button onclick="submitScrobbles()">upload adjusted scrobbles</button> {# Changed text to lowercase #}
-    
-    <div id="upload-status"></div> {# Status message for upload progress #}
-    <div id="progress-bar-container"> {# Container for the progress bar #}
-        <div id="progress-bar"></div> {# Actual progress bar #}
+    <div class="main-content-wrapper">
+        {% if not tracks %}
+        <form method="post" enctype="multipart/form-data" class="upload-form">
+            <label>upload your .scrobbler.log file:</label>
+            <input type="file" name="file" accept=".log" required>
+            <button type="submit" class="upload-button">upload</button>
+        </form>
+        {% else %}
+        <div class="tracks-section-container">
+            <div class="left-column">
+                <h3>tracks loaded:</h3>
+                <p class="track-count-text">{{ tracks|length }}</p>
+                <label class="offset-label">timezone offset (hours):</label>
+                <input type="number" id="offset" value="0" onchange="adjustTimestamps()" class="offset-input">
+                <button onclick="submitScrobbles()" class="submit-button">upload to last.fm</button>
+            </div>
+            <div class="right-column">
+                <div class="table-container">
+                    <table id="track-table">
+                        <thead><tr><th>artist</th><th>title</th><th>original timestamp (local)</th><th>adjusted timestamp (local)</th></tr></thead>
+                        <tbody>
+                            {% for t in tracks %}
+                            <tr data-timestamp="{{ t.timestamp }}">
+                                <td>{{ t.artist }}</td>
+                                <td>{{ t.title }}</td>
+                                <td class="original"></td>
+                                <td class="adjusted"></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="upload-status"></div>
+                <div id="progress-bar-container">
+                    <div id="progress-bar"></div>
+                </div>
+
+                <div id="results"></div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
-    <div id="results"></div>
-    {% endif %}
+    <div class="footer">
+        2025 - <a href="https://o-s.me/" target="_blank" rel="noopener noreferrer">OS</a>
+    </div>
 </body>
 </html>

@@ -6,65 +6,124 @@
         body {
             margin: 0;
             padding: 0;
-            font-family: "Helvetica", Arial, sans-serif; /* Changed to Helvetica with fallbacks */
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; /* Prioritize Helvetica Neue, then Helvetica */
             background-color: #1a1a1a; /* Dark background */
             color: #f0f0f0; /* Light text color */
             display: flex;
-            justify-content: center;
-            align-items: center;
+            flex-direction: column; /* Stack main content and footer vertically */
+            justify-content: space-between; /* Push footer to bottom */
+            align-items: center; /* Center content horizontally */
             min-height: 100vh; /* Full viewport height */
-            text-align: center;
+            text-align: center; /* Default text alignment */
         }
 
-        .container {
+        .main-content-wrapper {
+            flex-grow: 1; /* Allow this wrapper to take available space */
+            display: flex;
+            justify-content: center; /* Center horizontally within the wrapper */
+            align-items: center; /* Vertically center content */
+            width: 100%; /* Take full width */
+            padding: 20px; /* Add some padding */
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        .text-section {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .subtitle {
-            font-size: 1em;
-            margin-top: 0px; /* Adjusted margin to place it below the main title */
-            margin-bottom: 15px; /* Spacing below subtitle */
-            color: #b0b0b0; /* Slightly lighter gray for subtitle */
-            text-transform: lowercase; /* Added lowercase transformation */
+            align-items: flex-start; /* Left-align text within this section */
+            margin-right: 50px; /* Space between text and button */
+            text-align: left; /* Ensure text is left-aligned */
         }
 
         .main-title {
             font-size: 3.5em; /* Larger title */
-            font-weight: 400; /* Less bold: changed from bold to 500 */
-            margin-bottom: -5px; /* Removed bottom margin to bring subtitle closer */
-            text-transform: lowercase; /* Already lowercase */
+            font-weight: 500; /* Semi-bold */
+            margin: 0; /* Remove default margins */
+            text-transform: lowercase;
             letter-spacing: 2px;
+            line-height: 1.2; /* Adjust line height for better spacing */
+        }
+
+        .subtitle {
+            font-size: 1em;
+            margin-top: -5px; /* Space below main title */
+            color: #b0b0b0; /* Slightly lighter gray for subtitle */
+            text-transform: lowercase;
+            line-height: 1.2;
         }
 
         .login-button {
             display: inline-block;
-            padding: 10px 25px; /* Smaller padding */
+            padding: 15px 35px; /* Larger padding for a more prominent button */
             background-color: #e53935; /* Last.fm red-ish color */
             color: white;
             text-decoration: none;
-            border-radius: 20px; /* Slightly rounded corners */
-            font-size: 1.1em; /* Smaller font size */
+            border-radius: 25px; /* More rounded corners */
+            font-size: 1.2em; /* Larger font size for button */
             font-weight: bold;
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* More prominent shadow */
-            text-transform: lowercase; /* Added lowercase transformation */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); /* More prominent shadow */
+            text-transform: lowercase;
+            white-space: nowrap; /* Prevent button text from wrapping */
         }
 
         .login-button:hover {
             background-color: #c62828; /* Darker red on hover */
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); /* Deeper shadow on hover */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); /* Deeper shadow on hover */
+        }
+
+        .footer {
+            font-size: 0.8em;
+            color: #555; /* Darker grey for footer text */
+            margin-bottom: 20px; /* Space from bottom */
+            text-transform: uppercase; /* Match image style */
+            letter-spacing: 1px;
+        }
+
+        .footer a { /* Style for the link within the footer */
+            color: #555; /* Keep link color consistent with footer text */
+            text-decoration: none; /* Remove underline */
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: #f0f0f0; /* Lighter color on hover for visibility */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                flex-direction: column; /* Stack text and button vertically on smaller screens */
+                text-align: center; /* Center text when stacked */
+            }
+            .text-section {
+                align-items: center; /* Center text within its section */
+                margin-right: 0; /* Remove horizontal margin */
+                margin-bottom: 30px; /* Add vertical space between text and button */
+            }
+            .main-title {
+                font-size: 2.5em;
+            }
+            .subtitle {
+                font-size: 0.9em;
+            }
+            .login-button {
+                padding: 12px 30px;
+                font-size: 1em;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="main-title">os-scrobbler</h1>
-        <p class="subtitle">a scrobble.log scrobbler</p>
+    <div class="main-content-wrapper">
+        <div class="text-section">
+            <h1 class="main-title">os-scrobbler</h1>
+            <p class="subtitle">a scrobble.log scrobbler</p>
+        </div>
         <a href="/login" class="login-button">authorize with last.fm</a>
+    </div>
+    <div class="footer">
+        2025 - <a href="https://o-s.me/" target="_blank" rel="noopener noreferrer">OS</a>
     </div>
 </body>
 </html>
