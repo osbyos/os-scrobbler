@@ -30,11 +30,13 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def make_api_sig(params):
+    """Generates an MD5 API signature for a Last.fm API request."""
     # Ensure all parameter values are strings before concatenation for hashing
     sig_raw = ''.join([k + str(params[k]) for k in sorted(params)]) + API_SECRET
     return md5_hash(sig_raw)
 
 def get_session_key(token):
+    """Exchanges a request token for a session key."""
     sig_raw = f"api_key{API_KEY}methodauth.getSessiontoken{token}{API_SECRET}"
     api_sig = md5_hash(sig_raw)
     params = {
@@ -76,16 +78,20 @@ def get_user_info(username):
     return None # Return None if no image found or error
 
 def decode_line(line):
+    """Decodes a byte string, trying UTF-8 and falling back to ISO-8859-1."""
     try:
         return line.decode('utf-8')
     except UnicodeDecodeError:
         return line.decode('ISO-8859-1')
 
 def submit_track(track, session_key, offset_seconds):
-    # Track format: artist, album, title, tracknum, duration, L, timestamp
+    """Submits a single track to Last.fm."""
+    # Track format: artist, album, title, tracknum, duration, flag, timestamp
     # Changed condition: now allows 'L' or 'S' flags for scrobbling
     if len(track) < 7 or track[5] not in ['L', 'S']:
         return "Skipped (Flag not L or S)"
+    
+    # Last.fm requires a separate key for each track in the batch
     params = {
         'method': 'track.scrobble',
         'artist[0]': track[0],
@@ -168,17 +174,27 @@ def scrobbler():
         parsed_tracks = []
         for e in entries:
             parts = e.split('\t')
-            if len(parts) < 7:
-                continue
-            parsed_tracks.append({
-                'artist': parts[0],
-                'album': parts[1],
-                'title': parts[2],
-                'tracknum': parts[3],
-                'duration': parts[4],
-                'flag': parts[5],
-                'timestamp': int(parts[6])
-            })
+            # Check for a valid number of parts and handle the ValueError
+            if len(parts) >= 7:
+                try:
+                    # Attempt to convert the timestamp to an integer.
+                    # This is the line that caused the original error.
+                    timestamp = int(parts[6])
+                    
+                    parsed_tracks.append({
+                        'artist': parts[0],
+                        'album': parts[1],
+                        'title': parts[2],
+                        'tracknum': parts[3],
+                        'duration': parts[4],
+                        'flag': parts[5],
+                        'timestamp': timestamp
+                    })
+                except (ValueError, IndexError) as error:
+                    # Log the error and skip the malformed line
+                    print(f"Skipping malformed log line: '{e}'. Error: {error}")
+                    continue
+        
         session['parsed_tracks'] = parsed_tracks
         return render_template('scrobbler.html', username=username, tracks=parsed_tracks, pfp_url=pfp_url)
 
